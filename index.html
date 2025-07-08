@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>だよと愉快な仲間達</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="https://cdn.glitch.global/92a9e88e-8915-459f-9c1c-dea675176022/dayodayo?v=1738577241715">
+</head>
+<body>
+  <div id="header"></div> 
+  <div class="content">
+  <h1>だよほんへ</h1>
+   <ul>
+     <li><a href="i-filter-proxy.html"><u><strong>プロキシ集</strong></u></a><br></li><br>
+     <li><a href="https://yuyuyu-homepage.glitch.me/" target="_blank"><u><strong>ゆゆゆのホームぺージ</strong></u></a></li><br>
+    <li><a href="https://karameryu-nest.glitch.me/" target="blank"><u><strong>からめりゅの巣</strong></u></a></li><br><br><br>
+    </ul>
+    <p>このサイトの文字にはクリックできるのがまぎれているよ! by ゆゆゆ<br></p>
+  </div>
+  <div id="footer"></div> 
+  <script>
+const balls = [];
+const colors = ['#FF5733', '#33FF57', '#3357FF', '#FFD700', '#FF33A1'];
+
+// ヘッダーとフッターの高さを動的に取得
+const header = document.getElementById('header');
+const footer = document.getElementById('footer');
+
+// 重力の設定
+const gravity = 0.2; // 重力加速度
+const friction = 0.99; // 反発の減衰（跳ね返りの減少）
+
+// ボールを作成
+for (let i = 0; i < 2; i++) {
+  const ball = document.createElement('div');
+  ball.className = 'ball';
+  ball.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+  // ボールのサイズをランダムに設定（例: 20px〜50px）
+  const ballSize = Math.random() * 30 + 20; // 20px〜50pxの間でランダムにサイズを決定
+  ball.style.width = `${ballSize}px`;
+  ball.style.height = `${ballSize}px`;
+  ball.style.position = 'absolute'; // 画面上で位置を指定
+  ball.style.borderRadius = '50%'; // ボールを丸くする
+  ball.style.left = `${Math.random() * window.innerWidth}px`;
+  ball.style.top = `${Math.random() * (window.innerHeight - header.offsetHeight - footer.offsetHeight) + header.offsetHeight}px`; // ヘッダーとフッターを避けた範囲
+  document.body.appendChild(ball);
+
+  balls.push({
+    element: ball,
+    xSpeed: (Math.random() - 0.5) * 5,
+    ySpeed: 0, // 初期Y速度は0（重力で落ちる）
+    color: ball.style.backgroundColor, // ボールの色
+    bounceFactor: getBounceFactor(ball.style.backgroundColor), // 色に応じた反発係数
+    isDragged: false, // クリックして持っているかどうか
+    dragStartX: 0, // ドラッグ開始時のX座標
+    dragStartY: 0, // ドラッグ開始時のY座標
+    dragStartTime: 0, // ドラッグ開始時の時間
+    size: ballSize // ボールのサイズを記録
+  });
+}
+
+// 反発係数を色ごとに設定
+function getBounceFactor(color) {
+  switch (color) {
+    case '#FF5733': return 0.8;
+    case '#33FF57': return 0.9;
+    case '#3357FF': return 0.7;
+    case '#FFD700': return 0.5;
+    case '#FF33A1': return 1.0;
+    default: return 0.8;
+  }
+}
+
+// ボールを動かす
+function animate() {
+  // ヘッダーとフッターの高さを最新の状態に更新
+  const headerHeight = header.getBoundingClientRect().height;
+  const footerHeight = footer.getBoundingClientRect().height;
+
+  balls.forEach((ball) => {
+    const rect = ball.element.getBoundingClientRect();
+
+    if (!ball.isDragged) {
+      // 重力によるY軸の加速
+      ball.ySpeed += gravity;
+
+      // 位置を更新
+      let newX = rect.left + ball.xSpeed;
+      let newY = rect.top + ball.ySpeed;
+
+      // ヘッダーとフッターに当たったら反射
+      if (newX <= 0 || newX + rect.width >= window.innerWidth) {
+        ball.xSpeed *= -1;
+      }
+
+      // ボールがフッターにめり込まないように制御
+      if (newY <= headerHeight) {
+        ball.ySpeed *= -ball.bounceFactor; // 反発係数を適用
+        ball.ySpeed *= friction; // 反発の減衰
+        newY = headerHeight; // ヘッダーで反射
+      }
+
+      if (newY + rect.height >= window.innerHeight - footerHeight) {
+        ball.ySpeed *= -ball.bounceFactor; // 反発係数を適用
+        ball.ySpeed *= friction; // 反発の減衰
+        newY = window.innerHeight - footerHeight - rect.height; // フッターで反射
+      }
+
+      // ボールの位置を反映
+      ball.element.style.left = `${newX}px`;
+      ball.element.style.top = `${newY}px`;
+
+      // ボール同士の当たり判定
+      balls.forEach((otherBall) => {
+        if (ball !== otherBall) {
+          const otherRect = otherBall.element.getBoundingClientRect();
+          if (isColliding(rect, otherRect)) {
+            handleCollision(ball, otherBall);
+          }
+        }
+      });
+    }
+  });
+
+  requestAnimationFrame(animate);
+}
+
+animate();
+
+// ボール同士の衝突判定
+function isColliding(rect1, rect2) {
+  return !(rect1.right < rect2.left ||
+           rect1.left > rect2.right ||
+           rect1.bottom < rect2.top ||
+           rect1.top > rect2.bottom);
+}
+
+// 衝突処理（下に転がっているボールとぶつかる）
+function handleCollision(ball1, ball2) {
+  const rect1 = ball1.element.getBoundingClientRect();
+  const rect2 = ball2.element.getBoundingClientRect();
+
+  const centerX1 = rect1.left + rect1.width / 2;
+  const centerY1 = rect1.top + rect1.height / 2;
+  const centerX2 = rect2.left + rect2.width / 2;
+  const centerY2 = rect2.top + rect2.height / 2;
+
+  const dx = centerX2 - centerX1;
+  const dy = centerY2 - centerY1;
+  const angle = Math.atan2(dy, dx);
+
+  // ボールの反発（スーパーボールのような強い反発）
+  const speed1 = Math.sqrt(ball1.xSpeed ** 2 + ball1.ySpeed ** 2);
+  const speed2 = Math.sqrt(ball2.xSpeed ** 2 + ball2.ySpeed ** 2);
+
+  const bounceFactor1 = ball1.bounceFactor; // ボール1の反発係数
+  const bounceFactor2 = ball2.bounceFactor; // ボール2の反発係数
+
+  // 反発後の速度計算
+  const newSpeed1 = (speed1 * (bounceFactor1 - 1) + speed2 * (bounceFactor2 - 1)) / 2;
+  const newSpeed2 = (speed2 * (bounceFactor2 - 1) + speed1 * (bounceFactor1 - 1)) / 2;
+
+  ball1.xSpeed = newSpeed1 * Math.cos(angle);
+  ball1.ySpeed = newSpeed1 * Math.sin(angle);
+  ball2.xSpeed = newSpeed2 * Math.cos(angle);
+  ball2.ySpeed = newSpeed2 * Math.sin(angle);
+
+  // 衝突後に位置調整（重なりを防ぐ）
+  const radius1 = rect1.width / 2;
+  const radius2 = rect2.width / 2;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const overlap = radius1 + radius2 - distance;
+
+  if (overlap > 0) {
+    // 重なりを解消するための調整
+    const moveX = (overlap / distance) * dx;
+    const moveY = (overlap / distance) * dy;
+
+    // ボールの位置を微調整（重なりを防ぐ）
+    ball1.element.style.left = `${rect1.left - moveX}px`;
+    ball1.element.style.top = `${rect1.top - moveY}px`;
+    ball2.element.style.left = `${rect2.left + moveX}px`;
+    ball2.element.style.top = `${rect2.top + moveY}px`;
+  }
+
+  // ボールが下で転がっている時の反発処理
+  if (ball1.ySpeed > 0 && ball2.ySpeed > 0 && ball1.ySpeed < ball2.ySpeed) {
+    // もし落ちてきたボールが下のボールにぶつかった場合、ボール1（下のボール）が反発
+    const newYSpeed1 = -ball1.ySpeed * ball1.bounceFactor; // 下のボールのY速度を反発させる
+    ball1.ySpeed = Math.max(newYSpeed1, 1); // 速度がゼロにならないように最小速度を確保
+  }
+
+  // 衝突後にボールが加速しすぎないようにするため、速度の下限を設定
+  const minSpeed = 0.5; // 最小速度
+  ball1.xSpeed = Math.max(minSpeed, ball1.xSpeed);
+  ball1.ySpeed = Math.max(minSpeed, ball1.ySpeed);
+  ball2.xSpeed = Math.max(minSpeed, ball2.xSpeed);
+  ball2.ySpeed = Math.max(minSpeed, ball2.ySpeed);
+}
+
+
+// クリックまたはタッチでボールを持つ機能
+let selectedBall = null;
+let offsetX = 0;
+let offsetY = 0;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragStartTime = 0;
+
+const handleStart = (event) => {
+  const touchX = event.type === 'touchstart' ? event.touches[0].clientX : event.clientX;
+  const touchY = event.type === 'touchstart' ? event.touches[0].clientY : event.clientY;
+
+  balls.forEach((ball) => {
+    const rect = ball.element.getBoundingClientRect();
+    // ボールをクリックまたはタッチしたかどうか
+    if (touchX >= rect.left && touchX <= rect.left + rect.width &&
+        touchY >= rect.top && touchY <= rect.top + rect.height) {
+      selectedBall = ball;
+      offsetX = touchX - rect.left;
+      offsetY = touchY - rect.top;
+      dragStartX = touchX; // ドラッグ開始位置
+      dragStartY = touchY; // ドラッグ開始位置
+      dragStartTime = Date.now(); // ドラッグ開始時間
+      selectedBall.isDragged = true; // ボールを持った状態
+      selectedBall.xSpeed = 0; // クリック時の動きがないようにX速度をリセット
+      selectedBall.ySpeed = 0; // Y速度もリセット
+    }
+  });
+};
+
+const handleMove = (event) => {
+  if (selectedBall) {
+    const touchX = event.type === 'touchmove' ? event.touches[0].clientX : event.clientX;
+    const touchY = event.type === 'touchmove' ? event.touches[0].clientY : event.clientY;
+    selectedBall.element.style.left = `${touchX - offsetX}px`;
+    selectedBall.element.style.top = `${touchY - offsetY}px`;
+  }
+};
+
+const handleEnd = (event) => {
+  if (selectedBall) {
+    const touchEndX = event.type === 'touchend' ? event.changedTouches[0].clientX : event.clientX;
+    const touchEndTime = Date.now();
+    
+    // ドラッグした距離と時間を使ってスピードを計算
+    const distance = touchEndX - dragStartX;
+    const time = touchEndTime - dragStartTime;
+
+    // 速度計算 (距離 ÷ 時間)
+    const velocity = distance / time;
+
+    // 計算した速度をボールに反映
+    selectedBall.xSpeed = velocity;
+
+    selectedBall.isDragged = false; // ボールを放した状態
+    selectedBall = null; // 選択中のボールをリセット
+  }
+};
+
+// マウスおよびタッチイベントのリスナー追加
+document.addEventListener('mousedown', handleStart);
+document.addEventListener('mousemove', handleMove);
+document.addEventListener('mouseup', handleEnd);
+
+document.addEventListener('touchstart', handleStart);
+document.addEventListener('touchmove', handleMove);
+document.addEventListener('touchend', handleEnd);
+
+</script>
+  <script src="script.js"></script>
+</body>
+</html>
+<!--メモの例-->
+<!--CSSのカラーコードは自由に変えてOK　hm-->
+<!--内容を書くときは、<body>で囲んであるとこに入れる。(footerの下には置かない)　てんきゅ-->
+<!--コードは大体小文字でOK　了解-->
+<!--新しくページを作るときは、テンプレをコピペしてから作る。(テンプレ.html)　テンプレはここに貼ればおｋ？　なるほ-->
+<!--新しくページを作るときは、Filesの横にある+ボタンをおして、ファイル名を入力してAdd This Fileを押す(htmlが書きたいときは、ファイル名を[名前].html にする)-
+<!うっひょ～！！！->
